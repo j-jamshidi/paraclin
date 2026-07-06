@@ -1,0 +1,24 @@
+# paraclin configuration
+# Paths may be absolute or relative to the repository root.
+
+# Directory scanned (recursively) for Paraphase outputs
+# (*.paraphase.json + sibling BAM/VCFs). Drop your Paraphase results here, or
+# point this at an existing results directory.
+results_root: sample_data
+
+# Path to your local Paraphase checkout (https://github.com/PacificBiosciences/paraphase).
+# paraclin reads gene->region/build metadata from <paraphase_repo>/paraphase/data/<build>/config.yaml.
+# Paraphase is PacBio-licensed and is NOT bundled — install it separately.
+paraphase_repo: ../paraphase
+
+# Default reference build assumed when a sample does not encode one.
+# Paraphase encodes the build in the JSON `phase_region` prefix (38 / 19 / chm13).
+default_build: "38"
+
+# SQLite index (created on first scan) and append-only audit log.
+database: paraclin.db
+audit_log: audit.log
+
+# igv.js reference genome id (must match the build of the data).
+igv_genome: hg38
+reference_fasta: null

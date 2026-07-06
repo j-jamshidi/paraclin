@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# App runtime artifacts
+*.db
+audit.log
+
+# Patient / clinical data — never commit Paraphase outputs or BAMs
+sample_data/*
+!sample_data/.gitkeep
+*.bam
+*.bam.bai
+*.cram
+*.vcf
+*.paraphase.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
