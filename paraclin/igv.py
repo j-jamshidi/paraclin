@@ -40,7 +40,7 @@ def build_session_xml(
             "genome": igv_genome,
             "hasGeneTrack": "true",
             "hasSequenceTrack": "true",
-            "locus": condition.realign_region,
+            "locus": condition.region,
             "version": "8",
         },
     )

@@ -52,17 +52,10 @@ def provenance_stamp(sample) -> dict:
 
 
 def _paraphase_version() -> str | None:
+    """Best-effort: report the Paraphase version if it happens to be installed in
+    the environment (optional — paraclin does not require Paraphase)."""
     try:
-        import importlib.util
-        import sys
-
-        repo = get_settings().paraphase_repo
-        if str(repo) not in sys.path:
-            sys.path.insert(0, str(repo))
-        spec = importlib.util.find_spec("paraphase")
-        if spec:
-            import paraphase  # noqa: WPS433
-            return getattr(paraphase, "__version__", None)
+        import paraphase  # noqa: WPS433
+        return getattr(paraphase, "__version__", None)
     except Exception:  # noqa: BLE001
         return None
-    return None

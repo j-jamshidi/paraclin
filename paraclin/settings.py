@@ -21,7 +21,6 @@ DEFAULT_CONFIG = REPO_ROOT / "config.yaml"
 @dataclass(frozen=True)
 class Settings:
     results_root: Path
-    paraphase_repo: Path
     default_build: str
     database: Path
     audit_log: Path
@@ -47,7 +46,6 @@ def get_settings(config_path: str | os.PathLike | None = None) -> Settings:
     ref = raw.get("reference_fasta")
     return Settings(
         results_root=_resolve(REPO_ROOT, raw.get("results_root", "sample_data")),
-        paraphase_repo=_resolve(REPO_ROOT, raw.get("paraphase_repo", "../paraphase")),
         default_build=str(raw.get("default_build", "38")),
         database=_resolve(REPO_ROOT, raw.get("database", "paraclin.db")),
         audit_log=_resolve(REPO_ROOT, raw.get("audit_log", "audit.log")),

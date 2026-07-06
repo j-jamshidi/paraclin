@@ -50,7 +50,7 @@ new interpreters plug into a registry.
 ```
 paraclin/            FastAPI backend (Python)
   settings.py        config loader
-  conditions.py      gene -> region/build from the Paraphase config
+  conditions.py      gene -> region/build read from each sample's JSON
   db.py indexer.py   SQLite index built by scanning results_root (checksums)
   qc.py              depth gating
   interpret/         base + smn1 + f8 (raw calls kept separate from calls)
@@ -65,8 +65,10 @@ scripts/             standalone CLIs (e.g. SMN1 silent-carrier caller)
 
 - Python 3.10+
 - Node.js 18+ / npm
-- A local [Paraphase](https://github.com/PacificBiosciences/paraphase) checkout
-  (for gene→region/build metadata) and some Paraphase output to review.
+- [Paraphase](https://github.com/PacificBiosciences/paraphase) **output** to review
+  (the `*.paraphase.json` + BAM + VCFs produced by running Paraphase on your HiFi
+  data). paraclin reads these output files only — it does **not** need a Paraphase
+  installation at runtime.
 
 ## Install & run
 
@@ -105,10 +107,9 @@ Open **http://localhost:5199**.
 
 ### 3. Point paraclin at your data
 
-Edit [`config.yaml`](config.yaml) (see [Configuration](#configuration)):
-
-- set `paraphase_repo` to your local Paraphase checkout, and
-- put your Paraphase outputs under `results_root` (default `sample_data/`).
+Put your Paraphase outputs under `results_root` (default `sample_data/`) — see
+[Configuration](#configuration). Everything paraclin needs (locus, member genes,
+build) is read from the outputs themselves; no Paraphase installation is required.
 
 Then click **Rescan folder** in the UI (or `curl -X POST
 http://localhost:8077/api/rescan`) to index them. Pick a sample and a condition.
@@ -156,7 +157,6 @@ Press `Ctrl-C` in each terminal (or `pkill -f uvicorn` for the backend).
 
 | Symptom | Fix |
 |---|---|
-| Opening a result errors about a missing config | set `paraphase_repo` in `config.yaml` to your Paraphase checkout |
 | Sample list is empty | put outputs under `results_root`, then click **Rescan folder** |
 | igv viewer is blank | ensure the `.bam` **and** `.bam.bai` sit next to the `.paraphase.json` |
 | LAN URL not reachable | check your firewall allows inbound TCP 5199; confirm both machines are on the same subnet |
@@ -168,8 +168,7 @@ Edit [`config.yaml`](config.yaml):
 | Key | Meaning |
 |---|---|
 | `results_root` | folder scanned for `*.paraphase.json` (+ sibling BAM/VCFs) |
-| `paraphase_repo` | path to your Paraphase checkout (provides gene configs) |
-| `default_build` | `38` / `19` / `chm13` fallback |
+| `default_build` | `38` / `19` / `chm13` fallback when a sample omits it |
 | `database`, `audit_log` | SQLite index and audit log locations |
 | `igv_genome` | igv.js genome id (match your data's build) |
 
@@ -200,7 +199,8 @@ python scripts/smn1_silent_carrier.py /path/to/<sample>.paraphase.json
 
 ## Design notes (accreditation-oriented)
 
-Genomic facts come from the Paraphase config (single source of truth); every
+Genomic facts (locus, member genes, build) are read from each sample's own
+Paraphase JSON, so paraclin stays a self-contained reader of Paraphase output; every
 result carries QC and a provenance stamp; raw caller output is always shown next
 to the derived clinical statement; interpretation is deterministic and offline;
 every view/download is audited. Interpretation thresholds (e.g. QC depth) are

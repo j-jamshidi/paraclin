@@ -6,11 +6,6 @@
 # point this at an existing results directory.
 results_root: sample_data
 
-# Path to your local Paraphase checkout (https://github.com/PacificBiosciences/paraphase).
-# paraclin reads gene->region/build metadata from <paraphase_repo>/paraphase/data/<build>/config.yaml.
-# Paraphase is PacBio-licensed and is NOT bundled — install it separately.
-paraphase_repo: ../paraphase
-
 # Default reference build assumed when a sample does not encode one.
 # Paraphase encodes the build in the JSON `phase_region` prefix (38 / 19 / chm13).
 default_build: "38"

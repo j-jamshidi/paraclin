@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from . import __version__ as APP_VERSION
 from . import audit, igv, indexer
-from .conditions import get_condition, list_conditions
+from .conditions import condition_from_record, interpreted_genes
 from .db import Sample, get_session
 from .interpret import get_interpreter
 from .qc import build_qc
@@ -112,17 +112,14 @@ def sample_detail(sample_id: str):
     with open(row.json_path) as fh:
         data = json.load(fh)
     conds = []
-    for c in list_conditions(row.build):
-        if c.gene in row.genes:
-            # A tighter, sample-specific default view than the whole realign_region:
-            # Paraphase's per-gene phase_region ("<build>:chrN:start-end").
-            pr = (data.get(c.gene) or {}).get("phase_region")
-            viewer_locus = c.realign_region
-            if isinstance(pr, str) and pr.count(":") == 2:
-                viewer_locus = pr.split(":", 1)[1]
-            conds.append({"gene": c.gene, "disease": c.disease,
-                          "summary": c.summary, "region": c.realign_region,
-                          "viewer_locus": viewer_locus})
+    for gene in interpreted_genes():
+        if gene not in row.genes:
+            continue
+        rec = data.get(gene) or {}
+        c = condition_from_record(gene, rec, row.build)
+        conds.append({"gene": c.gene, "disease": c.disease,
+                      "summary": c.summary, "region": c.region,
+                      "viewer_locus": c.region})
     d = row.to_dict()
     d["conditions"] = conds
     return d
@@ -141,10 +138,10 @@ def sample_raw(sample_id: str):
 @app.get("/api/samples/{sample_id}/{gene}/result")
 def sample_result(sample_id: str, gene: str):
     row = _get_sample(sample_id)
-    cond = get_condition(gene, row.build)
-    if cond is None or not cond.has_interpreter:
-        raise HTTPException(404, f"No interpreter for gene '{gene}'.")
     rec = _load_record(row, gene)
+    cond = condition_from_record(gene, rec, row.build)
+    if not cond.has_interpreter:
+        raise HTTPException(404, f"No interpreter for gene '{gene}'.")
     q = build_qc(rec)
     interp = get_interpreter(cond.interpreter)
     result = interp.interpret(rec, row.vcf_paths.get(gene), q)
@@ -153,7 +150,7 @@ def sample_result(sample_id: str, gene: str):
     out = result.to_dict()
     out["provenance"] = audit.provenance_stamp(row)
     out["condition"] = {"gene": cond.gene, "disease": cond.disease,
-                        "region": cond.realign_region, "build": cond.build}
+                        "region": cond.region, "build": cond.build}
     return out
 
 
@@ -163,9 +160,8 @@ def sample_result(sample_id: str, gene: str):
 @app.get("/api/samples/{sample_id}/{gene}/session.xml")
 def session_xml(sample_id: str, gene: str):
     row = _get_sample(sample_id)
-    cond = get_condition(gene, row.build)
-    if cond is None:
-        raise HTTPException(404, f"Unknown gene '{gene}'.")
+    rec = _load_record(row, gene)
+    cond = condition_from_record(gene, rec, row.build)
     if not row.bam_path:
         raise HTTPException(409, "No BAM available for this sample.")
     vcfs = [row.vcf_paths[gene]] if gene in row.vcf_paths else []
@@ -180,9 +176,8 @@ def session_xml(sample_id: str, gene: str):
 @app.get("/api/samples/{sample_id}/{gene}/bundle.zip")
 def bundle_zip(sample_id: str, gene: str):
     row = _get_sample(sample_id)
-    cond = get_condition(gene, row.build)
-    if cond is None:
-        raise HTTPException(404, f"Unknown gene '{gene}'.")
+    rec = _load_record(row, gene)
+    cond = condition_from_record(gene, rec, row.build)
     if not row.bam_path:
         raise HTTPException(409, "No BAM available for this sample.")
     vcfs = [row.vcf_paths[gene]] if gene in row.vcf_paths else []
