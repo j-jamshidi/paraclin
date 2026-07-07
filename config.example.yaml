@@ -1,4 +1,6 @@
-# paraclin configuration
+# paraclin configuration — copy to config.yaml and edit for your setup:
+#   cp config.example.yaml config.yaml
+# config.yaml is git-ignored so your local paths are never committed.
 # Paths may be absolute or relative to the repository root.
 
 # Directory scanned (recursively) for Paraphase outputs

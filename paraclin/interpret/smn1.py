@@ -19,7 +19,8 @@ from __future__ import annotations
 
 from .base import Interpreter, Result
 
-VERSION = "1.1.0"  # v1.1: adds SMN1 exon 7 / SMNΔ7-8 deletion evaluation
+VERSION = "1.2.0"  # v1.2: carrier (1 copy) reported in main status; experimental
+# tab restricted to the 2+0 silent-carrier check only. v1.1 added exon 7 / SMNΔ7-8.
 
 MARKERS = [
     {"name": "g.27134T>G", "rsid": "rs143838139", "chrom": "chr5", "pos": 70952074,
@@ -163,16 +164,16 @@ class Smn1Interpreter(Interpreter):
             mhits = _scan_vcf(vcf_path, [MODIFIER], "smn2hap").get(MODIFIER["name"], [])
             modifier_present = bool(mhits)
 
-        affected = self._affected_result(rec, qc, modifier_present)
-        carrier = self._carrier_result(rec, vcf_path, qc)
-        affected.secondary = carrier.to_dict()
-        affected.secondary_tab_label = "Carrier status (experimental)"
-        return affected
+        primary = self._primary_result(rec, qc, modifier_present)
+        silent = self._silent_carrier_result(rec, vcf_path, qc)
+        primary.secondary = silent.to_dict()
+        primary.secondary_tab_label = "Silent carrier 2+0 (experimental)"
+        return primary
 
     # ------------------------------------------------------------------ #
-    # Primary view: affected vs not-affected (diagnostic)
+    # Primary view: affected / carrier / not-carrier (copy-number based)
     # ------------------------------------------------------------------ #
-    def _affected_result(self, rec: dict, qc: dict, modifier_present: bool) -> Result:
+    def _primary_result(self, rec: dict, qc: dict, modifier_present: bool) -> Result:
         smn1_cn = rec.get("smn1_cn")
         smn2_cn = rec.get("smn2_cn")
         del78_cn = rec.get("smn_del78_cn")
@@ -220,34 +221,40 @@ class Smn1Interpreter(Interpreter):
                 + " Requires clinical correlation and confirmation.",
             )
 
+        if smn1_cn == 1:
+            return base(
+                "carrier",
+                "SMA — carrier (1 SMN1 copy, not affected)",
+                "One functional SMN1 (exon 7) copy — an SMA carrier (not affected). "
+                + (mechanism + " " if mechanism else "")
+                + "Reproductive/genetic counselling is indicated; partner testing recommended.",
+            )
+
+        # smn1_cn >= 2
+        tail = (" A 2-copy result does not exclude a 2+0 silent carrier — see the "
+                "experimental silent-carrier tab." if smn1_cn == 2 else "")
         return base(
-            "not_affected",
-            f"SMA — not affected ({smn1_cn} SMN1 exon 7 copies)",
-            f"{smn1_cn} functional SMN1 (exon 7) copy(ies) present, so this is not an "
-            "SMA-affected genotype. "
-            + (mechanism + " " if mechanism else "")
-            + "Carrier status is assessed separately (experimental tab).",
+            "not_carrier",
+            f"SMA — not affected, not a carrier by copy number ({smn1_cn} SMN1 copies)",
+            f"{smn1_cn} functional SMN1 (exon 7) copies — not affected and not a carrier by "
+            "copy number." + tail,
         )
 
     # ------------------------------------------------------------------ #
-    # Secondary view: carrier / silent-carrier status (EXPERIMENTAL)
+    # Secondary view: SILENT CARRIER (2+0) check only — EXPERIMENTAL.
+    # Applies only to 2-copy individuals; other copy numbers are not applicable.
     # ------------------------------------------------------------------ #
-    def _carrier_result(self, rec: dict, vcf_path: str | None, qc: dict) -> Result:
+    def _silent_carrier_result(self, rec: dict, vcf_path: str | None, qc: dict) -> Result:
         smn1_cn = rec.get("smn1_cn")
-        del78_cn = rec.get("smn_del78_cn")
         hap_details = rec.get("haplotype_details", {}) or {}
         raw = {
-            "smn1_cn": smn1_cn, "smn_del78_cn": del78_cn,
+            "smn1_cn": smn1_cn,
             "smn1_haplotypes": list((rec.get("smn1_haplotypes", {}) or {}).values()),
         }
-        evidence: list[dict] = [
-            {"label": "SMN1 copy number", "value": smn1_cn},
-            {"label": "SMNΔ7-8 (exon 7-8) deletion copies", "value": del78_cn,
-             "note": "A deletion allele on one chromosome is the usual carrier mechanism."},
-        ]
+        evidence: list[dict] = [{"label": "SMN1 copy number", "value": smn1_cn}]
         caveats = [
-            "EXPERIMENTAL — carrier / silent-carrier (2+0) assessment is for research "
-            "use and must not be used for clinical carrier reporting without validation.",
+            "EXPERIMENTAL — silent-carrier (2+0) assessment is for research use and must "
+            "not be used for clinical carrier reporting without validation.",
         ]
 
         def base(status, headline, interpretation):
@@ -258,24 +265,16 @@ class Smn1Interpreter(Interpreter):
                 caveats=caveats, experimental=True,
             )
 
-        if smn1_cn is None:
-            return base("review", "Carrier status — ambiguous copy number",
-                        "SMN1 copy number could not be resolved; carrier status "
-                        "cannot be assessed.")
-        if smn1_cn == 0:
-            return base("not_applicable", "Carrier status — not applicable (affected)",
-                        "0 functional SMN1 copies (affected genotype); carrier status "
-                        "does not apply.")
-        if smn1_cn == 1:
-            mech = (f" Paraphase detects {del78_cn} SMNΔ7-8 deletion allele(s), consistent "
-                    "with an exon 7-8 deletion on the other chromosome." if del78_cn else "")
-            return base("carrier", "Carrier — 1 SMN1 exon 7 copy",
-                        "One functional SMN1 (exon 7) copy — an SMA carrier." + mech
-                        + " Reproductive/genetic counselling indicated; partner testing "
-                        "recommended.")
-        if smn1_cn >= 3:
-            return base("not_carrier", f"Not a carrier — {smn1_cn} SMN1 copies",
-                        f"{smn1_cn} SMN1 copies. Not a carrier by copy number.")
+        # The 2+0 silent-carrier question only applies to 2-copy individuals.
+        if smn1_cn != 2:
+            detail = ("copy number could not be resolved" if smn1_cn is None
+                      else f"this sample has {smn1_cn} SMN1 copy(ies)")
+            return base(
+                "not_applicable",
+                "Silent-carrier (2+0) check — not applicable",
+                "The 2+0 silent-carrier assessment applies only to individuals with 2 SMN1 "
+                f"copies; {detail}. Affected / carrier status is on the main tab.",
+            )
 
         # smn1_cn == 2 : the 1+1 vs 2+0 question
         marker_hits: list[str] = []

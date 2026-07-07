@@ -34,10 +34,11 @@ new interpreters plug into a registry.
   detected …), a QC panel (depth gating), the raw Paraphase calls kept separate
   from the derived interpretation, references, and a full provenance stamp
   (app / Paraphase / interpreter versions, build, checksums).
-- **Experimental carrier tab (SMA)** — affected vs not-affected is the primary
-  call (with explicit SMN1 **exon 7** status and SMNΔ7-8 exon 7-8 deletion
-  evaluation, distinguishing the deletion mechanism from SMN1→SMN2 conversion);
-  carrier / silent-carrier (2+0) status is a separate tab clearly labelled
+- **SMA status + experimental silent-carrier tab** — the main status reports
+  affected / **carrier (1 copy)** / not-a-carrier from copy number, with explicit
+  SMN1 **exon 7** status and SMNΔ7-8 exon 7-8 deletion evaluation (distinguishing
+  the deletion mechanism from SMN1→SMN2 conversion). The **2+0 silent-carrier**
+  check (only meaningful for 2-copy individuals) is a separate tab clearly labelled
   experimental.
 - **Embedded igv.js** — reproduces Paraphase's recommended view (reads grouped by
   the `HP` tag, colored by the `YC` tag), squished, at the per-sample locus.
@@ -109,9 +110,16 @@ Open **http://localhost:5199**.
 
 ### 3. Point paraclin at your data
 
+Create your local config (git-ignored, so your paths are never committed):
+
+```bash
+cp config.example.yaml config.yaml
+```
+
 Put your Paraphase outputs under `results_root` (default `sample_data/`) — see
 [Configuration](#configuration). Everything paraclin needs (locus, member genes,
 build) is read from the outputs themselves; no Paraphase installation is required.
+(If you skip this step, paraclin falls back to `config.example.yaml`.)
 
 Then click **Rescan folder** in the UI (or `curl -X POST
 http://localhost:8077/api/rescan`) to index them. Pick a sample and a condition.
@@ -165,7 +173,8 @@ Press `Ctrl-C` in each terminal (or `pkill -f uvicorn` for the backend).
 
 ## Configuration
 
-Edit [`config.yaml`](config.yaml):
+Edit your local `config.yaml` (copied from
+[`config.example.yaml`](config.example.yaml)):
 
 | Key | Meaning |
 |---|---|

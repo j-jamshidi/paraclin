@@ -15,7 +15,16 @@ import yaml
 
 # Repository root = one level up from this package (paraclin/paraclin/settings.py).
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CONFIG = REPO_ROOT / "config.yaml"
+
+
+def _default_config() -> Path:
+    """Prefer a local (git-ignored) config.yaml; fall back to the tracked
+    config.example.yaml so a fresh checkout runs without any setup."""
+    local = REPO_ROOT / "config.yaml"
+    return local if local.exists() else REPO_ROOT / "config.example.yaml"
+
+
+DEFAULT_CONFIG = _default_config()
 
 
 @dataclass(frozen=True)
@@ -39,7 +48,7 @@ def _resolve(base: Path, value: str) -> Path:
 
 @lru_cache(maxsize=1)
 def get_settings(config_path: str | os.PathLike | None = None) -> Settings:
-    path = Path(config_path) if config_path else DEFAULT_CONFIG
+    path = Path(config_path) if config_path else _default_config()
     with open(path) as fh:
         raw = yaml.safe_load(fh) or {}
 

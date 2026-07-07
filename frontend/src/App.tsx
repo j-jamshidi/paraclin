@@ -175,9 +175,9 @@ export function App() {
             {condition && (
               <div className="tabs">
                 {([
-                  { key: "results", label: result?.secondary ? "Affected status" : "Results" },
+                  { key: "results", label: result?.secondary ? "Status" : "Results" },
                   ...(result?.secondary
-                    ? [{ key: "carrier", label: result.secondary_tab_label || "Carrier status (experimental)" }]
+                    ? [{ key: "carrier", label: result.secondary_tab_label || "Silent carrier (experimental)" }]
                     : []),
                   { key: "viewer", label: "Visualization" },
                   { key: "download", label: "Download" },
@@ -222,8 +222,8 @@ function ResultView({ result }: { result: Result }) {
     <div>
       {result.experimental && (
         <div className="banner warn">
-          <b>Experimental — research use only.</b> This carrier / silent-carrier
-          assessment is not validated for clinical carrier reporting.
+          <b>Experimental — research use only.</b> This silent-carrier (2+0)
+          assessment is not validated for clinical reporting.
         </div>
       )}
       <div className={"headline-card " + result.level}>

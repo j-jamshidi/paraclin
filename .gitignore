@@ -28,3 +28,6 @@ sample_data/*
 .DS_Store
 .idea/
 .vscode/
+
+# local config (copy of config.example.yaml)
+config.yaml
