@@ -35,6 +35,8 @@ class Settings:
     audit_log: Path
     igv_genome: str
     reference_fasta: Path | None
+    min_region_depth: float
+    min_genome_depth: float
 
     @property
     def db_url(self) -> str:
@@ -60,4 +62,6 @@ def get_settings(config_path: str | os.PathLike | None = None) -> Settings:
         audit_log=_resolve(REPO_ROOT, raw.get("audit_log", "audit.log")),
         igv_genome=raw.get("igv_genome", "hg38"),
         reference_fasta=_resolve(REPO_ROOT, ref) if ref else None,
+        min_region_depth=float(raw.get("min_region_depth", 20)),
+        min_genome_depth=float(raw.get("min_genome_depth", 15)),
     )

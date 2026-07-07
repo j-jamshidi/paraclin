@@ -19,3 +19,9 @@ audit_log: audit.log
 # igv.js reference genome id (must match the build of the data).
 igv_genome: hg38
 reference_fasta: null
+
+# Quality-control depth thresholds (read-depth gate only). A result is flagged
+# for REVIEW if a depth is below its threshold or is not reported. These are
+# conservative defaults — set validated values for your ONT assay.
+min_region_depth: 20   # region median depth (x)
+min_genome_depth: 15   # genome-wide depth (x)

@@ -1,33 +1,44 @@
 """QC gating.
 
-Extracts depth/quality context from a Paraphase gene record so no clinical call
-is ever presented without it. Thresholds are conservative defaults for HiFi;
-tune per validated assay.
+Extracts depth context from a Paraphase gene record so no clinical call is ever
+presented without it. This is a READ-DEPTH gate only — it does not assess mapping
+quality, phasing confidence, or call correctness.
+
+Thresholds are conservative defaults for ONT and are configurable in config.yaml
+(`min_region_depth`, `min_genome_depth`); tune per validated assay. A sample fails
+(-> REVIEW) if a depth value is below its threshold OR is not reported.
 """
 
 from __future__ import annotations
 
-# Minimum region median depth below which calls are flagged for review.
-MIN_REGION_DEPTH = 20.0
-MIN_GENOME_DEPTH = 15.0
+from .settings import get_settings
 
 
 def build_qc(rec: dict) -> dict:
+    settings = get_settings()
+    min_region = settings.min_region_depth
+    min_genome = settings.min_genome_depth
+
     region = rec.get("region_depth") or {}
     region_median = region.get("median") if isinstance(region, dict) else None
     genome_depth = rec.get("genome_depth")
 
     flags: list[str] = []
-    if region_median is not None and region_median < MIN_REGION_DEPTH:
-        flags.append(f"Low region depth ({region_median}x < {MIN_REGION_DEPTH}x).")
-    if genome_depth is not None and genome_depth < MIN_GENOME_DEPTH:
-        flags.append(f"Low genome depth ({genome_depth}x < {MIN_GENOME_DEPTH}x).")
+    if region_median is None:
+        flags.append("Region depth not reported.")
+    elif region_median < min_region:
+        flags.append(f"Low region depth ({region_median}x < {min_region:g}x).")
+    if genome_depth is None:
+        flags.append("Genome depth not reported.")
+    elif genome_depth < min_genome:
+        flags.append(f"Low genome depth ({genome_depth}x < {min_genome:g}x).")
 
     return {
         "region_depth_median": region_median,
         "region_depth_p80": region.get("percentile80") if isinstance(region, dict) else None,
         "genome_depth": genome_depth,
-        "min_region_depth": MIN_REGION_DEPTH,
+        "min_region_depth": min_region,
+        "min_genome_depth": min_genome,
         "flags": flags,
         "pass": len(flags) == 0,
     }

@@ -2,8 +2,9 @@
 
 **A clinical review & visualization GUI for [PacBio Paraphase](https://github.com/PacificBiosciences/paraphase) long-read outputs.**
 
-Paraphase resolves segmentally-duplicated medical genes (SMN1, F8, …) from PacBio
-HiFi data, but its output — copy numbers, haplotype strings, tagged BAMs — is not
+Paraphase resolves segmentally-duplicated medical genes (SMN1, F8, …) from
+long-read (ONT) data, but its output — copy numbers, haplotype strings, tagged
+BAMs — is not
 convenient to review. paraclin turns it into a clean workflow: pick a sample, pick
 a condition, get a clinically-framed result with QC and provenance, view the
 phased/colored alignments in-app (igv.js), and download an IGV desktop session
@@ -69,7 +70,7 @@ scripts/             standalone CLIs (e.g. SMN1 silent-carrier caller)
 - Python 3.10+
 - Node.js 18+ / npm
 - [Paraphase](https://github.com/PacificBiosciences/paraphase) **output** to review
-  (the `*.paraphase.json` + BAM + VCFs produced by running Paraphase on your HiFi
+  (the `*.paraphase.json` + BAM + VCFs produced by running Paraphase on your ONT
   data). paraclin reads these output files only — it does **not** need a Paraphase
   installation at runtime.
 

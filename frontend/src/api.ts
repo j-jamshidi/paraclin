@@ -54,6 +54,7 @@ export interface Result {
     region_depth_p80: number | null;
     genome_depth: number | null;
     min_region_depth: number;
+    min_genome_depth: number;
     flags: string[];
     pass: boolean;
   };

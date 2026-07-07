@@ -236,6 +236,7 @@ function ResultView({ result }: { result: Result }) {
         <p>
           Status:{" "}
           {result.qc.pass ? <span className="qc-pass">PASS</span> : <span className="qc-fail">REVIEW</span>}
+          <a href="#qc-note" className="qc-astr" title="What does this mean?">*</a>
           {"  ·  "}region depth (median): {String(result.qc.region_depth_median)}x
           {"  ·  "}genome depth: {String(result.qc.genome_depth)}x
         </p>
@@ -291,6 +292,15 @@ function ResultView({ result }: { result: Result }) {
           </div>
         )}
       </div>
+
+      <p id="qc-note" className="qc-footnote">
+        <b>*</b> Quality control is a <b>read-depth gate only</b>. <b>PASS</b> means
+        region median depth ≥ {String(result.qc.min_region_depth)}× and genome depth ≥{" "}
+        {String(result.qc.min_genome_depth)}× (thresholds set in <code>config.yaml</code>).
+        A depth that is below threshold or not reported is flagged <b>REVIEW</b>. This
+        check does <b>not</b> assess mapping quality, phasing confidence, or whether the
+        call is correct — it only confirms coverage was adequate.
+      </p>
     </div>
   );
 }
