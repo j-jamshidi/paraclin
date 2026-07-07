@@ -89,15 +89,32 @@ cd paraclin
 
 ### 1. Backend (terminal 1)
 
+Easiest — one command (creates `.venv`, installs deps, starts the server):
+
+```bash
+./run.sh                 # macOS/Linux
+```
+
+Or do it manually:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn paraclin.app:app --port 8077
+python -m pip install -r requirements.txt
+python -m uvicorn paraclin.app:app --port 8077
 ```
 
 Leave it running. During development add `--reload` to auto-restart on code
 changes. A quick check: `curl http://localhost:8077/api/health` should return JSON.
+
+> **Run it with `python -m uvicorn`, not the bare `uvicorn` command.** The bare
+> `uvicorn` on your PATH may belong to a *different* Python environment (commonly
+> Anaconda's `base`) than the one you `pip install`ed into — which produces
+> `ModuleNotFoundError: No module named 'fastapi'` even though the install
+> succeeded. `python -m uvicorn` always uses the current interpreter.
+> **Anaconda/conda users:** either use the `.venv` above (recommended), or install
+> into your active env with `python -m pip install -r requirements.txt` and start
+> with `python -m uvicorn …`.
 
 ### 2. Frontend (terminal 2)
 
@@ -168,6 +185,7 @@ Press `Ctrl-C` in each terminal (or `pkill -f uvicorn` for the backend).
 
 | Symptom | Fix |
 |---|---|
+| `ModuleNotFoundError: No module named 'fastapi'` (or `paraclin`) when starting | You're running a `uvicorn` from a different environment than where deps installed (often Anaconda `base`). Use `./run.sh`, or activate `.venv` and start with `python -m uvicorn paraclin.app:app` from the repo root. |
 | Sample list is empty | put outputs under `results_root`, then click **Rescan folder** |
 | igv viewer is blank | ensure the `.bam` **and** `.bam.bai` sit next to the `.paraphase.json` |
 | LAN URL not reachable | check your firewall allows inbound TCP 5199; confirm both machines are on the same subnet |
