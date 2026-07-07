@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from .base import Interpreter, Result
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"  # v1.1: adds SMN1 exon 7 / SMNΔ7-8 deletion evaluation
 
 MARKERS = [
     {"name": "g.27134T>G", "rsid": "rs143838139", "chrom": "chr5", "pos": 70952074,
@@ -108,7 +108,46 @@ def _scan_vcf(vcf_path: str, targets: list[dict], hap_filter: str) -> dict:
 AFFECTED_REFERENCES = [
     "Chen et al. 2023, AJHG — Paraphase SMN1/SMN2 (PMC9943720)",
     "GeneReviews: Spinal Muscular Atrophy (NBK1352)",
+    "Homozygous absence of SMN1 exon 7 causes ~95% of SMA (Lefebvre 1995; Prior, GeneReviews)",
+    "Hybrid SMN (SMN2ex7–SMN1ex8) / gene conversion associates with milder phenotype "
+    "(Niba et al. 2020, Brain Dev)",
 ]
+
+
+def _exon7_evidence(smn1_cn, smn2_cn, del78_cn) -> tuple[list[dict], str]:
+    """Build the exon-7 / SMNΔ7-8 (exon 7-8) deletion evidence lines and, when
+    SMN1 exon 7 is lost, a sentence describing the likely mechanism (physical
+    deletion vs SMN1->SMN2 gene conversion)."""
+    if smn1_cn is None:
+        exon7_status = "indeterminate"
+    elif smn1_cn == 0:
+        exon7_status = "absent on both alleles (homozygous loss)"
+    elif smn1_cn == 1:
+        exon7_status = "1 copy (one allele lost)"
+    else:
+        exon7_status = f"{smn1_cn} copies present"
+
+    evidence = [
+        {"label": "SMN1 exon 7 status", "value": exon7_status,
+         "note": "Exon 7 (c.840C) is the functionally critical exon; its "
+                 "homozygous absence causes ~95% of SMA."},
+        {"label": "SMNΔ7-8 (exon 7-8) deletion copies", "value": del78_cn,
+         "note": "Paraphase count of SMN alleles with exon 7-8 physically deleted."},
+    ]
+
+    mechanism = ""
+    if smn1_cn is not None and smn1_cn < 2:
+        if del78_cn:
+            mechanism = (
+                f"Paraphase detects {del78_cn} SMNΔ7-8 deletion allele(s), consistent "
+                "with the exon 7-8 deletion mechanism (the cause of ~95% of SMA).")
+        else:
+            mechanism = (
+                "No SMNΔ7-8 deletion allele was detected, so the exon 7 loss may reflect "
+                "SMN1->SMN2 gene conversion (which raises SMN2 copy number) or a hybrid "
+                "rearrangement rather than a simple deletion — correlate with the SMN2 "
+                "copy number. Hybrid/conversion alleles are associated with a milder phenotype.")
+    return evidence, mechanism
 
 
 class Smn1Interpreter(Interpreter):
@@ -137,6 +176,7 @@ class Smn1Interpreter(Interpreter):
         smn1_cn = rec.get("smn1_cn")
         smn2_cn = rec.get("smn2_cn")
         del78_cn = rec.get("smn_del78_cn")
+        exon7_evidence, mechanism = _exon7_evidence(smn1_cn, smn2_cn, del78_cn)
         raw = {
             "smn1_cn": smn1_cn, "smn2_cn": smn2_cn, "smn_del78_cn": del78_cn,
         }
@@ -144,6 +184,7 @@ class Smn1Interpreter(Interpreter):
             {"label": "SMN1 copy number", "value": smn1_cn},
             {"label": "SMN2 copy number", "value": smn2_cn,
              "note": "Main severity modifier when affected."},
+            *exon7_evidence,
             {"label": "SMN2 c.859G>C modifier (rs121909192)",
              "value": "present" if modifier_present else "absent",
              "note": "Positive modifier — tends to milder phenotype." if modifier_present
@@ -170,9 +211,10 @@ class Smn1Interpreter(Interpreter):
                    if smn2_cn and smn2_cn >= 3 else "")
             return base(
                 "affected",
-                f"SMA — affected genotype (0 functional SMN1 copies, {smn2_cn} SMN2)",
-                "Biallelic absence of functional SMN1 (copy number 0) — a genotype "
-                "consistent with being affected by SMA. " + sev
+                f"SMA — affected genotype (homozygous SMN1 exon 7 loss, {smn2_cn} SMN2)",
+                "Homozygous absence of SMN1 exon 7 (copy number 0) — the defining molecular "
+                "lesion in ~95% of SMA and a genotype consistent with being affected. "
+                + (mechanism + " " if mechanism else "") + sev
                 + ("The c.859G>C positive modifier is present."
                    if modifier_present else "The c.859G>C positive modifier is absent.")
                 + " Requires clinical correlation and confirmation.",
@@ -180,9 +222,11 @@ class Smn1Interpreter(Interpreter):
 
         return base(
             "not_affected",
-            f"SMA — not affected ({smn1_cn} functional SMN1 copies)",
-            f"{smn1_cn} functional SMN1 copy(ies) present, so this is not an SMA-affected "
-            "genotype. Carrier status is assessed separately (experimental tab).",
+            f"SMA — not affected ({smn1_cn} SMN1 exon 7 copies)",
+            f"{smn1_cn} functional SMN1 (exon 7) copy(ies) present, so this is not an "
+            "SMA-affected genotype. "
+            + (mechanism + " " if mechanism else "")
+            + "Carrier status is assessed separately (experimental tab).",
         )
 
     # ------------------------------------------------------------------ #
@@ -190,12 +234,17 @@ class Smn1Interpreter(Interpreter):
     # ------------------------------------------------------------------ #
     def _carrier_result(self, rec: dict, vcf_path: str | None, qc: dict) -> Result:
         smn1_cn = rec.get("smn1_cn")
+        del78_cn = rec.get("smn_del78_cn")
         hap_details = rec.get("haplotype_details", {}) or {}
         raw = {
-            "smn1_cn": smn1_cn,
+            "smn1_cn": smn1_cn, "smn_del78_cn": del78_cn,
             "smn1_haplotypes": list((rec.get("smn1_haplotypes", {}) or {}).values()),
         }
-        evidence: list[dict] = [{"label": "SMN1 copy number", "value": smn1_cn}]
+        evidence: list[dict] = [
+            {"label": "SMN1 copy number", "value": smn1_cn},
+            {"label": "SMNΔ7-8 (exon 7-8) deletion copies", "value": del78_cn,
+             "note": "A deletion allele on one chromosome is the usual carrier mechanism."},
+        ]
         caveats = [
             "EXPERIMENTAL — carrier / silent-carrier (2+0) assessment is for research "
             "use and must not be used for clinical carrier reporting without validation.",
@@ -218,9 +267,12 @@ class Smn1Interpreter(Interpreter):
                         "0 functional SMN1 copies (affected genotype); carrier status "
                         "does not apply.")
         if smn1_cn == 1:
-            return base("carrier", "Carrier — 1 SMN1 copy",
-                        "One functional SMN1 copy — an SMA carrier. Reproductive/genetic "
-                        "counselling indicated; partner testing recommended.")
+            mech = (f" Paraphase detects {del78_cn} SMNΔ7-8 deletion allele(s), consistent "
+                    "with an exon 7-8 deletion on the other chromosome." if del78_cn else "")
+            return base("carrier", "Carrier — 1 SMN1 exon 7 copy",
+                        "One functional SMN1 (exon 7) copy — an SMA carrier." + mech
+                        + " Reproductive/genetic counselling indicated; partner testing "
+                        "recommended.")
         if smn1_cn >= 3:
             return base("not_carrier", f"Not a carrier — {smn1_cn} SMN1 copies",
                         f"{smn1_cn} SMN1 copies. Not a carrier by copy number.")

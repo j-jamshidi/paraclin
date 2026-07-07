@@ -35,7 +35,9 @@ new interpreters plug into a registry.
   from the derived interpretation, references, and a full provenance stamp
   (app / Paraphase / interpreter versions, build, checksums).
 - **Experimental carrier tab (SMA)** — affected vs not-affected is the primary
-  call; carrier / silent-carrier (2+0) status is a separate tab clearly labelled
+  call (with explicit SMN1 **exon 7** status and SMNΔ7-8 exon 7-8 deletion
+  evaluation, distinguishing the deletion mechanism from SMN1→SMN2 conversion);
+  carrier / silent-carrier (2+0) status is a separate tab clearly labelled
   experimental.
 - **Embedded igv.js** — reproduces Paraphase's recommended view (reads grouped by
   the `HP` tag, colored by the `YC` tag), squished, at the per-sample locus.
